@@ -135,19 +135,37 @@ perk_list = {
 }
 
 def generate_points(p):
-    # Adjust weight factor based on max 16 players
-    weight_factor = p / 75  # 75 is arbitrary number, it's somewhat balanced for a max of 16 player to average roughly half the max points every round, lesser number means more points, higher number means less points
+    max_points = 45
+
+    # Base split chances
+    below_half_ratio = 0.95
+    above_half_ratio = 0.05
     
-    # Generate weights to favor higher numbers as p increases
-    weights = [(i / 45) ** weight_factor for i in range(0, 45 + 1)]
-    
+    #Increase the chance of getting above half by 5% for each player
+    adjustment = min(p * 0.05, 1.0)
+    below_half_ratio = max(below_half_ratio - adjustment, 0.25)
+    above_half_ratio = min(above_half_ratio + adjustment, 1)
+
+    # Adjust the skew based on player count
+    skew_factor = min(1 + p * 0.05, 2)
+
+    # Assign weights
+    weights_below_half = [(i / (max_points // 2)) ** skew_factor for i in range(0, max_points // 2 + 1)]
+    weights_above_half = [(i / (max_points // 2)) ** skew_factor for i in range(max_points // 2 + 1, max_points + 1)]
+
     # Normalize weights
-    total_weight = sum(weights)
-    normalized_weights = [w / total_weight for w in weights]
-    
-    # Randomly choose a value for p based on the weights
-    p = random.choices(range(0, 45 + 1), weights=normalized_weights)[0]
-    
+    total_below_half = sum(weights_below_half)
+    total_above_half = sum(weights_above_half)
+
+    normalized_below = [w / total_below_half * below_half_ratio for w in weights_below_half]
+    normalized_above = [w / total_above_half * above_half_ratio for w in weights_above_half]
+
+    # Combine the weights
+    combined_weights = normalized_below + normalized_above
+
+    # Choose a random number based on the weights
+    p = random.choices(range(0, max_points + 1), weights=combined_weights)[0]
+
     return p
 
 def generate_perks(points):
